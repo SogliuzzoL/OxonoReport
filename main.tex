@@ -224,6 +224,9 @@ Avec les résultats du tournoi, nous pouvons observer que les approches Minimax,
 De plus, il est intéressant de noter que les agents basés sur des réseaux de neurones, à savoir AlphaZero et Athénan, ont des performances inférieur à celles de leurs homologues basés sur des heuristiques faites à la main, Minimax et MCTS respectivement. Cependant, il est important de souligner que les agents basés sur des réseaux de neurones ont été entraînés pendant une période relativement courte (environ 48 heures), et qu'avec plus de temps d'entraînement, leurs performances pourraient potentiellement s'améliorer. De plus l'entaînement d'AlphaZero a été réalisé avec un équipement beaucoup plus limité que celui utilisé réellement par DeepMind pour entraîner leur agent, ce qui a pu limiter les performances de notre implémentation d'AlphaZero.
 
 \section{Conclusion}
+Au cours de ce projet, nous avons implémenté et évalué plusieurs agents pour le jeu Oxono, en utilisant différentes approches telles que Minimax, MCTS, et des réseaux de neurones inspirés d'AlphaZero et d'Athénan. Les résultats ont montré que les agents basés sur des heuristiques faites à la main ont surpassé ceux basés sur des réseaux de neurones, bien que ces derniers aient été entraînés pendant une période relativement courte. Notre étude a également mis en comparaison différentes heuristiques et améliorations, démontrant l'importance de leur influence sur les différents agents.
+
+Basés sur ces résultats, nous avons donc décidé d'utiliser l'agent Minimax pour le premier rendu, car il garantit les meilleures performances immédiates. Cependant, conscients du fort potentiel de l'apprentissage par \textit{Tree Learning} d'Athénan, nous sommes en parallèle en train de continuer son entraînement avec pour ambition de l'utiliser pour la compétition finale.
 
 \bibliographystyle{plainnat}
 \bibliography{references}
