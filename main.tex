@@ -1,0 +1,162 @@
+\documentclass[a4paper,11pt]{article}
+\usepackage[french]{babel}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage[hidelinks]{hyperref}
+\usepackage{graphicx}
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+\usepackage{amsmath}
+\usepackage{float}
+\usepackage{caption}
+\usepackage[nonamebreak,round]{natbib}
+\usepackage{multirow}
+\usepackage{hyperref}
+\usepackage{multirow}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\graphicspath{ {./images/} }
+\begin{document}
+
+% En-tête et bas de page
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{Projet Oxono}
+\fancyfoot[L]{Groupe 114}
+\fancyfoot[R]{Page \thepage \hspace{1pt} sur \pageref{LastPage}}
+\renewcommand{\headrulewidth}{0.5pt}
+\renewcommand{\footrulewidth}{0.5pt}
+% ----------------------
+
+% Page de titre
+\begin{titlepage}
+	\centering
+	\includegraphics[scale=0.5]{images/logo_ucl.png}
+
+	\vspace{1cm}
+
+	\Huge
+	\textbf{\makebox[\textwidth][c]{\rule{1.2\textwidth}{0.4pt}}} \\[0.5cm]
+	LINFO1361 - Intelligence artificielle\\[0.5cm]
+	Projet 2 - Recherche adversariale (Oxono) \\[0.5cm]
+	\textbf{\makebox[\textwidth][c]{\rule{1.2\textwidth}{0.4pt}}}
+
+	\vspace{0.5cm}
+
+	\LARGE
+	Groupe n\degres114 \\
+	\textit{Röben Friedrich Nihat} 99942500 \\
+	\textit{Sogliuzzo Loris} 26482510
+	\vfill
+	\centering\includegraphics[scale=0.2]{images/logoepl.jpg}
+\end{titlepage}
+% ----------------------
+
+% Table des matières
+\newpage
+\tableofcontents
+% ----------------------
+
+\newpage
+\listoffigures
+\newpage
+\listoftables
+\newpage
+
+\section{Introduction}
+
+\section{Implémentation}
+
+\subsection{Minimax}
+
+\subsection{Monte-Carlo Tree Search (MCTS)}
+
+\subsection{AlphaZero}
+En plus des agents guidés par des heuristiques faites à la main, nous avons voulu implémenter des agents basés sur des réseaux neuronaux. En premier lieu, nous avons choisi d'adapter l'implémentation d'AlphaZero \citep{silver2016mastering, silver2017masteringchessshogiselfplay} à Oxono.
+
+Pour ce faire, nous avons implémenté le même réseau de neurones que celui utilisé par AlphaZero, à savoir un réseau de neurones convolutifs avec des blocs résiduels possédant deux têtes de sortie : une tête de politique pour prédire la probabilité de chaque action et une tête de valeur pour prédire l'évaluation de l'état.
+
+De plus, il a fallu adapter la représentation de l'état du jeu pour qu'elle soit compatible avec le réseau de neurones. Nous avons utilisé un tenseur comportant 7 canaux, chacun de dimension $6 \times 6$, correspondant à la taille du plateau de jeu, où les canaux 1 et 2 encodent respectivement les positions des pions O de couleurs rose et noire, 3 et 4 sont dédiés aux X, 5 et 6 encodent la position des totems O et X, et le dernier canal encode le tour de jeu.
+
+Ensuite, pour la sélection d'action, nous avons couplé le réseau de neurones à l'algorithme MCTS. La sortie de la tête de politique sert à guider la recherche, tandis que la sortie de la tête de valeur sert à évaluer les n\oe uds feuilles de l'arbre. Durant les simulations, la sélection des n\oe uds s'effectue selon la formule PUCT (Predictor + Upper Confidence Bound applied to Trees) (\autoref{eq:puct}) :
+\begin{equation}
+	PUCT(s, a) = -Q(s, a) + c \cdot P(s, a) \frac{\sqrt{N(s)}}{1 + N(s, a)}
+	\label{eq:puct}
+\end{equation}
+Où $Q(s, a)$ est la valeur moyenne de l'action $a$ évaluée depuis le point de vue du joueur suivant, $P(s, a)$ est la probabilité de l'action $a$ donnée par la tête de politique, $N(s)$ est le nombre total de visites de l'état $s$, et $N(s, a)$ le nombre de visites de l'action $a$. L'hyperparamètre $c$ contrôle l'exploration, il est fixé à $1.5$ lors de la phase de jeu, mais augmenté à $2.5$ durant l'entraînement pour garantir une meilleure diversité d'exploration.
+
+Afin d'entraîner ce réseau de neurones sans aucune connaissance experte humaine, nous avons utilisé l'apprentissage par renforcement via auto-jeu, où le réseau joue continuellement contre lui-même pour générer ses propres données d'entraînement.
+
+Pour finir, nous avons ajouté une table de Zobrist lors de la phase de jeu pour accélérer les évaluations des positions déjà rencontrées.
+
+\subsection{Athénan}
+En plus de l'implémentation d'AlphaZero, nous avons également implémenté un autre agent basé sur un réseau de neurones, mais qui, cette fois-ci, utilise Minimax pour la sélection d'action, Athénan \citep{cohensolal2025minimaxstrikes}.
+
+Pour commencer, le réseau d'Athénan n'a plus besoin de tête de politique, il ne possède donc qu'une tête de valeur pour évaluer les positions. De plus, un changement d'architecture a été fait pour opter pour un réseau R2, qui est détaillé dans le \autoref{tab:r2}.
+
+\begin{table}[h]
+	\centering
+	\caption{Architecture du réseau de neurones \textit{R2-network} implémenté.}
+	\label{tab:r2}
+	\renewcommand{\arraystretch}{1.3}
+	\begin{tabularx}{\textwidth}{clX}
+		\toprule
+		\textbf{Couche} & \textbf{Type}     & \textbf{Détails et paramètres}                                                                                                    \\
+		\midrule
+		1               & Convolution       & Filtres : 132, Noyau : $3 \times 3$, avec padding.                                                                                \\
+		\addlinespace
+		2 -- 9          & 8 Blocs Résiduels & Par bloc : ReLU $\rightarrow$ Conv ($3 \times 3$, 132 filtres) $\rightarrow$ ReLU $\rightarrow$ Conv ($3 \times 3$, 132 filtres). \\
+		\addlinespace
+		10              & Dense + ReLU      & 518 neurones.                                                                                                                     \\
+		11              & Dense + ReLU      & 518 neurones.                                                                                                                     \\
+		12              & Dense (Sortie)    & 1 neurone (évaluation de la valeur de l'état).                                                                                    \\
+		\bottomrule
+	\end{tabularx}
+\end{table}
+
+Les différents paramètres de ce réseau ont été choisis afin de satisfaire un choix fait dans l'article d'Athénan, à savoir que le réseau doit contenir environ 5 millions de paramètres.
+
+Ensuite, nous utilisons deux algorithmes de recherche différents pour la phase de jeu et la phase d'entraînement. Durant la phase de jeu, nous utilisons un Unbounded Best-First Minimax (UBFM) qui étend, de manière itérative, l'arbre de recherche en profondeur pour trouver la meilleure action à jouer, le tout utilisant une table de Zobrist pour accélérer les évaluations des positions déjà rencontrées. À la fin du temps imparti pour la recherche, l'action choisie est celle qui a le plus de visites. Durant la phase d'entraînement, nous utilisons Descent Minimax, qui effectue une recherche en profondeur de l'arbre de jeu jusqu'à atteindre un état terminal du jeu. Une fois cette recherche effectuée, l'algorithme utilise un processus appelé Tree Learning pour mettre à jour les poids du réseau de neurones. Contrairement à AlphaZero qui se limite au Terminal Learning (c'est-à-dire l'apprentissage exclusif sur les états constituant la séquence finale de la partie, avec pour cible le résultat final du match), Athénan apprend sur l'intégralité des états de l'arbre de recherche partiel généré par l'algorithme. De plus, la cible d'apprentissage n'est pas l'issue finale de la partie, mais la valeur Minimax partielle calculée pour chaque état de l'arbre.
+
+Cette approche permet de n'avoir aucune perte d'information issue de la recherche et de générer environ 296 fois plus de données d'entraînement pour un même nombre de parties jouées, permettant ainsi un entraînement plus rapide et plus efficace du réseau de neurones.
+
+\section{Résultats et discussions}
+
+\subsection{Tournoi suisse}
+Afin d'évaluer les performances de nos différents agents, nous avons organisé un tournoi suisse à 4 rondes. Nous avons inclus dans ce tournoi les agents suivants : Minimax, MCTS, AlphaZero, Athénan, ainsi le Random agent. A chaque ronde, les agents s'affrontent en 1 contre 1 sur 20 parties (10 parties de chaques côtés). Une victoire apporte 3 point, une défaite 0 point, et un match nul 1 point à chaque agent. Etant donné que nous avons 5 agents, un agent ne joue pas à chaque ronde, et reçoit donc un point de bye (ici correspondant à avoir fait un match nul à chaques parties, soit 20 points). Les résultats de ce tournoi sont présentés dans le \autoref{tab:tournoi}.
+
+\begin{table}[h]
+	\centering
+	\caption{Résultats détaillés du tournoi suisse (4 rondes, 20 parties par match).}
+	\label{tab:tournoi}
+	\renewcommand{\arraystretch}{1.2}
+	\begin{tabularx}{\textwidth}{clXXXXc}
+		\toprule
+		\textbf{Rang} & \textbf{Agent} & \textbf{R1} & \textbf{R2} & \textbf{R3} & \textbf{R4} & \textbf{Total} \\
+		\midrule
+		1             & Minimax        & 60          & 36          & 30          & 60          & \textbf{186}   \\
+		2             & Athénan        & 39          & 24          & 20*         & 57          & \textbf{140}   \\
+		3             & MCTS           & 21          & 60          & 30          & 20*         & \textbf{131}   \\
+		4             & AlphaZero      & 0           & 20*         & 51          & 3           & \textbf{74}    \\
+		5             & Random         & 20*         & 0           & 9           & 0           & \textbf{29}    \\
+		\bottomrule
+		\addlinespace
+		\multicolumn{7}{l}{\small * Indique un point de \textit{bye} (20 points accordés d'office).}
+	\end{tabularx}
+\end{table}
+
+Pour infomation, l'agent Athénan et AlphaZero ont été entraînés pendant environ 48 heures chacun. Athénan a été entraîné sur CPU (AMD Ryzen 7 5700X avec 64Go de RAM disponnible), tandis qu'AlphaZero a été entraîné sur GPU (NVIDIA GeForce RTX 4060 Ti avec 8Go de VRAM disponnible).
+
+Avec les résultats du tournoi, nous pouvons observer que les approches Minimax, incluant Minimax et Athénan, sont plus performantes que les approches basées sur MCTS, à savoir MCTS et AlphaZero.
+
+De plus, il est intéressant de noter que les agents basés sur des réseaux de neurones, à savoir AlphaZero et Athénan, ont des performances inférieur à celles de leurs homologues basés sur des heuristiques faites à la main, Minimax et MCTS respectivement. Cependant, il est important de souligner que les agents basés sur des réseaux de neurones ont été entraînés pendant une période relativement courte (environ 48 heures), et qu'avec plus de temps d'entraînement, leurs performances pourraient potentiellement s'améliorer. De plus l'entaînement d'AlphaZero a été réalisé avec un équipement beaucoup plus limité que celui utilisé réellement par DeepMind pour entraîner leur agent, ce qui a pu limiter les performances de notre implémentation d'AlphaZero.
+
+\section{Conclusion}
+
+
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\end{document}
