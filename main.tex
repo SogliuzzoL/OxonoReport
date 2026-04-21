@@ -73,26 +73,27 @@ Durant ce projet, nous avons exploré plusieurs pistes pour concevoir une intell
 \label{sec:implémentation}
 
 \subsection{Minimax}
-Un algorithme Minmax basique représente le jeu et les coups possibles sous forme d'arbre. Il suppose qu'un joueur veut maximiser son gain, et minimiser celui de l'adversaire. L'algorithme choisit dès lors le coup procurant le meilleur résultat possible face à un adversaire qui joue parfaitement.
+Un algorithme Minimax \citep{russell2021aima} basique représente le jeu et les coups possibles sous forme d'arbre. Il suppose qu'un joueur veut maximiser son gain, et minimiser celui de l'adversaire. L'algorithme choisit dès lors le coup procurant le meilleur résultat possible face à un adversaire qui joue parfaitement.
 
 Néanmoins, la grille comporte 36 cases, sachant qu'il faut respecter la contrainte des 5 minutes par partie, il n'est pas envisageable d'explorer tous les coups possibles.
-C'est pour cette raison qu'il est primordial d'ajouter le \textbf{prunage Alpha-beta}.
-De plus, pour que la contrainte des 5 minutes soit respectée, il faut également imposer une profondeur maximum de l'arbre. Pour cela on va utiliser l'\textbf{Iterative Deepening Search} qui évite d'avoir une porfondeur fixe. L'agent Minimax basique pour ce projet contient donc ces deux ajouts.
+C'est pour cette raison qu'il est primordial d'ajouter le \textbf{élagage Alpha-beta}.
+De plus, pour que la contrainte des 5 minutes soit respectée, il faut également imposer une profondeur maximum de l'arbre. Pour cela on va utiliser l'\textbf{Iterative Deepening Search} qui évite d'avoir une profondeur fixe. L'agent Minimax basique pour ce projet contient donc ces deux ajouts.
 
 Pour améliorer ensuite l'agent, de multiples ajouts ont eu lieu :
 \begin{itemize}[nosep]
 	\item \textbf{Move ordering} : Triage des coups par score heuristique décroissant afin que alpha-beta voit d'abord les meilleurs coups;
-	\item \textbf{Killer moves} : Lorsque un coup provoque un cutoff beta, on mémorise la profondeur, et au prochain noeud à la même profondeur, ce coup sera testé en premier lieu;
-	\item \textbf{Table de transposition (Zobrist)} : Puisque un même coup peut être atteint par plusieurs chemins différents, une table de transposition est utilisée afin d'éviter de calculer à nouveau les mêmes noeuds. Pour cela, le hash de Zobrist est utilisé. Le hash d'un état est fait par un XOR sur tous les nombres correspondant aux pièces sur la grille. Le point intéressant est que si une pièce est ajoutée ou retirée, il suffit de XOR avec son nombre, et non de recalculer le hash en entier.
+	\item \textbf{Killer moves} : Lorsque un coup provoque un cutoff beta, on mémorise la profondeur, et au prochain noeud à la même profondeur, ce coup sera testé en premier lieu; \citep{cpw_killer_moves}
+	\item \textbf{Table de transposition (Zobrist)} : Puisque un même coup peut être atteint par plusieurs chemins différents, une table de transposition est utilisée afin d'éviter de calculer à nouveau les mêmes noeuds. Pour cela, le hash de Zobrist \citep{cpw_zobrist} est utilisé. Le hash d'un état est fait par un XOR sur tous les nombres correspondant aux pièces sur la grille. Le point intéressant est que si une pièce est ajoutée ou retirée, il suffit de XOR avec son nombre, et non de recalculer le hash en entier.
 	\item \textbf{Quiescence search} : Cette recherche a lieu lorsque alpha-beta arrive en profondeur 0. Au lieu d'évaluer normalement et retourner le score, cette recherche va regarder si quelqu'un peut gagner immédiatement depuis l'état actuel du jeu, ou bien au prochain coup, puis on retourne le meilleur score. Le but est d'éviter l'effet horizon (lorsque l'agent a atteint sa profondeur maximale et qu'il ne peut pas voir la suite). La profondeur de la quiescence est fixée à deux, car chercher plus loin serait d'une part plus long, mais de plus quasiment inutile.
-	\item \textbf{Singular extension} : Dans alpha-beta, les coups sont explorés à profondeur-1, mais il arrive qu'un coup est bien meilleur que les autres. L'explorer à la même profondeur que les autres coups serait du gaspillage. Si le score de ce coup moins le score du deuxième meilleur coup est supérieur à une "marge singulière" alors ce coup est singulier.
+	\item \textbf{Singular extension} : Dans alpha-beta, les coups sont explorés à profondeur-1, mais il arrive qu'un coup est bien meilleur que les autres. L'explorer à la même profondeur que les autres coups serait du gaspillage. Si le score de ce coup moins le score du deuxième meilleur coup est supérieur à une "marge singulière" alors ce coup est singulier. \citep{cpw_singular}
 	\item \textbf{Probcut} : Alpha-beta explore beaucoup de branches qui vont être coupées, le but de probcut est de prédire celles qui le seront afin qu'on ne doivent pas les explorer complètement. Si même lors de cette recherche peu profonde un score bien au-dessus de beta est retourné, alors il est quasi certain que la branche sera coupé, donc autant la couper directement.
-	\item \textbf{Aspiration windows} : Lors de l'iterative deepening, au lieu de chercher dans un fenêtre allant de moins l'infini à plus l'infini, on part d'une fenêtre plus réduite autour du score de l'itération précédente. Si le score est stable entre les profondeurs, il y a moins de noeuds à explorer.
+	\item \textbf{Aspiration windows} : Lors de l'iterative deepening, au lieu de chercher dans un fenêtre allant de moins l'infini à plus l'infini, on part d'une fenêtre plus réduite autour du score de l'itération précédente. Si le score est stable entre les profondeurs, il y a moins de noeuds à explorer. \citep{cpw_aspiration}
 \end{itemize}
 Une fonctionnalité d'amélioration n'a pas été retenue :
 \begin{itemize}[nosep]
-	\item \textbf{Last Move Reduction} : Les coups sont triés par score heuristique, logiquement ceux en fin de liste sont mauvais et ne valent pas la peine d'être explorés. Néanmoins, il faut faire attention où l'on place la limite entre le bon et le mauvais score.
+	\item \textbf{Late Move Reduction} : Les coups sont triés par score heuristique, logiquement ceux en fin de liste sont mauvais et ne valent pas la peine d'être explorés. Néanmoins, il faut faire attention où l'on place la limite entre le bon et le mauvais score.
 \end{itemize}
+
 
 \subsection{Monte-Carlo Tree Search (MCTS)}
 MCTS construit l'arbre de jeu en répétant des simulations, allouant un nombre plus important aux branches intéressantes.
@@ -103,18 +104,17 @@ Le MCTS est normalisé avec la valeur heuristique entre -1 et 1 et utilise des r
 
 Deux fonctionnalités d'améliorations non retenues :
 \begin{itemize}[nosep]
-	\item \textbf{Réutilisation de l'arbre} : Après un coup, au lieu de réinitialisé l'arbre, on avance la racine vers le noeud correspondant au coup joué et les simulations des tours précédents sont réutilisés;
-	\item \textbf{Early playout} : On joue 5 coups aléatoires puis on évalue. L'idée est donner une estimation plus dynamique en explorant un peu plus loin.
+	\item \textbf{Réutilisation de l'arbre} : Après un coup, au lieu de réinitialiser l'arbre, on avance la racine vers le noeud correspondant au coup joué et les simulations des tours précédents sont réutilisés;
+	\item \textbf{Truncated rollout} : On joue 5 coups aléatoires puis on évalue. L'idée est de donner une estimation plus dynamique en explorant un peu plus loin. Cette expérience était inspirée de la politique rollout d'AlphaGo \citep{silver2016mastering}.
 \end{itemize}
 
-
 \subsection{Heuristique}
-Minimax et MCTS utilise une heuristique pour évaluer l'état du jeu sans devoir aller jusqu'à la fin de la partie. Cette dernière retourne un score, positif si la position est favorable au joueur, négatif si elle est défavorable.
+Minimax et MCTS utilisent une heuristique pour évaluer l'état du jeu sans devoir aller jusqu'à la fin de la partie. Cette dernière retourne un score, positif si la position est favorable au joueur, négatif si elle est défavorable.
 
 La base de l'heuristique suit les règles du jeu et contient :
 \begin{itemize}[nosep]
-	\item \textbf{Score des lignes} : Toutes les lignes (horizontales et verticales) possibles avec quatre cases consécutives sont parcourues. Pour chaque ligne, on regarde si cette derniere contient uniquement nos pièces, celles de l'adversaire, ou bien si c'est une ligne mixte. Dans le cas où il y a trois pieces alignées avec une quatrième case vide, c'est une menace immédiate de victoire et l'agent devra les prioriser.
-	\item \textbf{Score des totems} : Contrôler le totem signifie qu'on peut le placer dans une zone stratégique du plateau avec des cases adjacentes vides utiles, et loin des zones où l'adversaire aimerait déposer le totem. Dès lors, le nombre de cases vides ajdacentes au totems et leur qualité stratégique est évaluée.
+	\item \textbf{Score des lignes} : Toutes les lignes (horizontales et verticales) possibles avec quatre cases consécutives sont parcourues. Pour chaque ligne, on regarde si cette dernière contient uniquement nos pièces, celles de l'adversaire, ou bien si c'est une ligne mixte. Dans le cas où il y a trois pièces alignées avec une quatrième case vide, c'est une menace immédiate de victoire et l'agent devra les prioriser.
+	\item \textbf{Score des totems} : Contrôler le totem signifie qu'on peut le placer dans une zone stratégique du plateau avec des cases adjacentes vides utiles, et loin des zones où l'adversaire aimerait déposer le totem. Dès lors, le nombre de cases vides adjacentes au totems et leur qualité stratégique est évaluée.
 \end{itemize}
 
 En plus de cela, le comptage des pièces restantes a été implémenté mais non retenu. Le but de ce dernier était de reconnaitre un avantage pour un joueur si son adversaire avait moins de pièces "X" ou "O" de disponibles et qu'il ne pouvait donc pas profiter de certains alignements.
@@ -245,7 +245,7 @@ Le \autoref{tab:heuristique} démontre l'importance de la dimension spatiale dan
 \end{table}
 
 \subsection{Tournoi suisse}
-Afin d'évaluer les performances de nos différents agents, nous avons organisé un tournoi suisse à 4 rondes. Nous avons inclus dans ce tournoi les agents suivants : Minimax, MCTS, AlphaZero, Athénan, ainsi le Random agent. A chaque ronde, les agents s'affrontent en 1 contre 1 sur 20 parties (10 parties de chaque côté). Une victoire apporte 3 point, une défaite 0 point, et un match nul 1 point à chaque agent. Etant donné que nous avons 5 agents, un agent ne joue pas à chaque ronde, et reçoit donc un point de bye (ici correspondant à avoir fait un match nul à chaque partie, soit 20 points). Les résultats de ce tournoi sont présentés dans le \autoref{tab:tournoi}.
+Afin d'évaluer les performances de nos différents agents, nous avons organisé un tournoi suisse à 4 rondes. Nous avons inclus dans ce tournoi les agents suivants : Minimax, MCTS, AlphaZero, Athénan, ainsi que le Random agent. A chaque ronde, les agents s'affrontent en 1 contre 1 sur 20 parties (10 parties de chaque côté). Une victoire apporte 3 points, une défaite 0 point, et un match nul 1 point à chaque agent. Etant donné que nous avons 5 agents, un agent ne joue pas à chaque ronde, et reçoit donc un point de bye (ici correspondant à avoir fait un match nul à chaque partie, soit 20 points). Les résultats de ce tournoi sont présentés dans le \autoref{tab:tournoi}.
 
 \begin{table}[h]
 	\centering
@@ -267,7 +267,7 @@ Afin d'évaluer les performances de nos différents agents, nous avons organisé
 	\end{tabularx}
 \end{table}
 
-Pour infomation, l'agent Athénan et AlphaZero ont été entraînés pendant environ 48 heures chacun. Athénan a été entraîné sur CPU (AMD Ryzen 7 5700X avec 64Go de RAM disponible), tandis qu'AlphaZero a été entraîné sur GPU (NVIDIA GeForce RTX 4060 Ti avec 8Go de VRAM disponible).
+Pour information, l'agent Athénan et AlphaZero ont été entraînés pendant environ 48 heures chacun. Athénan a été entraîné sur CPU (AMD Ryzen 7 5700X avec 64Go de RAM disponible), tandis qu'AlphaZero a été entraîné sur GPU (NVIDIA GeForce RTX 4060 Ti avec 8Go de VRAM disponible).
 
 Avec les résultats du tournoi, nous pouvons observer que les approches Minimax, incluant Minimax et Athénan, sont plus performantes que les approches basées sur MCTS, à savoir MCTS et AlphaZero.
 
